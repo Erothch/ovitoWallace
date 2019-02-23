@@ -652,7 +652,7 @@ void defineModifiersSubmodule(py::module m)
 				".. literalinclude:: ../example_snippets/calculate_displacements.py\n"
 				"   :lines: 4-\n")	
 	;
-
+	
 	ovito_class<AtomicStrainModifier, ReferenceConfigurationModifier>(m,
 			":Base class: :py:class:`ovito.pipeline.ReferenceConfigurationModifier`"
 			"\n\n"

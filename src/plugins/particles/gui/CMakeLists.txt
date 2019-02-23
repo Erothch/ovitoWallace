@@ -33,7 +33,7 @@ SET(SourceFiles
 	modifier/analysis/ackland_jones/AcklandJonesModifierEditor.cpp
 	modifier/analysis/cna/CommonNeighborAnalysisModifierEditor.cpp
 	modifier/analysis/coordination/CoordinationAnalysisModifierEditor.cpp
-	modifier/analysis/displacements/CalculateDisplacementsModifierEditor.cpp
+        modifier/analysis/displacements/CalculateDisplacementsModifierEditor.cpp
 	modifier/analysis/centrosymmetry/CentroSymmetryModifierEditor.cpp
 	modifier/analysis/strain/AtomicStrainModifierEditor.cpp
 	modifier/analysis/diamond/IdentifyDiamondModifierEditor.cpp	

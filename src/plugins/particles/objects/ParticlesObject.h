@@ -76,6 +76,8 @@ public:
 		TypeProperty = PropertyStorage::GenericTypeProperty,
 		IdentifierProperty = PropertyStorage::GenericIdentifierProperty,
 		PositionProperty = PropertyStorage::FirstSpecificProperty,
+		ElasticDisplacementProperty,
+		ElasticDisplacementMagnitudeProperty,
 		DisplacementProperty,
 		DisplacementMagnitudeProperty,
 		PotentialEnergyProperty,
@@ -110,7 +112,10 @@ public:
 		ElasticDeformationGradientProperty,
 		RotationProperty,
 		StretchTensorProperty,
-		MoleculeTypeProperty
+        MoleculeTypeProperty,
+        WallaceTensorProperty,
+        ElasticStabilityParameterProperty
+
 	};
 
 	/// \brief Constructor.

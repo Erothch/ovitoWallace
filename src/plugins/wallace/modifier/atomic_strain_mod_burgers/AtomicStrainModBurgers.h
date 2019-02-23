@@ -22,7 +22,7 @@
 #pragma once
 
 
-#include <plugins/particles/Particles.h>
+#include <plugins/wallace/Wallace.h>
 #include <plugins/particles/modifier/analysis/ReferenceConfigurationModifier.h>
 #include <plugins/particles/objects/ParticlesObject.h>
 #include <plugins/particles/util/ParticleOrderingFingerprint.h>
@@ -33,18 +33,18 @@ namespace Ovito { namespace Particles { OVITO_BEGIN_INLINE_NAMESPACE(Modifiers) 
 /**
  * \brief Calculates the per-particle strain tensors based on a reference configuration.
  */
-class OVITO_PARTICLES_EXPORT AtomicStrainModifier : public ReferenceConfigurationModifier
+class OVITO_PARTICLES_EXPORT AtomicStrainModBurgers : public ReferenceConfigurationModifier
 {
 	Q_OBJECT
-	OVITO_CLASS(AtomicStrainModifier)
+    OVITO_CLASS(AtomicStrainModBurgers)
 
-	Q_CLASSINFO("DisplayName", "Atomic strain");
+    Q_CLASSINFO("DisplayName", "Atomic strain mod burgers");
 	Q_CLASSINFO("ModifierCategory", "Analysis");
 
 public:
 
 	/// Constructor.
-	Q_INVOKABLE AtomicStrainModifier(DataSet* dataset);
+    Q_INVOKABLE AtomicStrainModBurgers(DataSet* dataset);
 
 protected:
 
@@ -66,11 +66,10 @@ private:
 				FloatType cutoff, AffineMappingType affineMapping, bool useMinimumImageConvention,
 				bool calculateDeformationGradients, bool calculateStrainTensors,
 				bool calculateNonaffineSquaredDisplacements, bool calculateRotations, bool calculateStretchTensors,
-				bool selectInvalidParticles) :
+                bool selectInvalidParticles, Vector3 burgersContent) :
 			RefConfigEngineBase(validityInterval, positions, simCell, refPositions, simCellRef,
-				std::move(identifiers), std::move(refIdentifiers), affineMapping, useMinimumImageConvention),
-			_cutoff(cutoff),
-		       //Should add a ? below to give option for diff displacements type	
+                std::move(identifiers), std::move(refIdentifiers), affineMapping, useMinimumImageConvention),
+            _cutoff(cutoff),
 			_displacements(ParticlesObject::OOClass().createStandardStorage(refPositions->size(), ParticlesObject::DisplacementProperty, false)),
 			_shearStrains(std::make_shared<PropertyStorage>(fingerprint.particleCount(), PropertyStorage::Float, 1, 0, tr("Shear Strain"), false)),
 			_volumetricStrains(std::make_shared<PropertyStorage>(fingerprint.particleCount(), PropertyStorage::Float, 1, 0, tr("Volumetric Strain"), false)),
@@ -80,7 +79,8 @@ private:
 			_invalidParticles(selectInvalidParticles ? ParticlesObject::OOClass().createStandardStorage(fingerprint.particleCount(), ParticlesObject::SelectionProperty, false) : nullptr),
 			_rotations(calculateRotations ? ParticlesObject::OOClass().createStandardStorage(fingerprint.particleCount(), ParticlesObject::RotationProperty, false) : nullptr),
 			_stretchTensors(calculateStretchTensors ? ParticlesObject::OOClass().createStandardStorage(fingerprint.particleCount(), ParticlesObject::StretchTensorProperty, false) : nullptr),
-			_inputFingerprint(std::move(fingerprint)) {}
+            _inputFingerprint(std::move(fingerprint)),
+            _burgersContent(burgersContent) {}
 
 		/// This method is called by the system after the computation was successfully completed.
 		virtual void cleanup() override {
@@ -144,6 +144,7 @@ private:
 		const PropertyPtr _rotations;
 		const PropertyPtr _stretchTensors;		
 		ParticleOrderingFingerprint _inputFingerprint;
+        const Vector3 _burgersContent;
 	};
 
 	/// Controls the cutoff radius for the neighbor lists.
@@ -166,6 +167,9 @@ private:
 
 	/// Controls the whether particles, for which the strain tensor could not be computed, are selected.
 	DECLARE_MODIFIABLE_PROPERTY_FIELD(bool, selectInvalidParticles, setSelectInvalidParticles);
+
+    /// Allows an input Burgers Vector to remove from displacement
+    DECLARE_MODIFIABLE_PROPERTY_FIELD_FLAGS(Vector3, burgersContent, setBurgersContent, PROPERTY_FIELD_MEMORIZE);
 };
 
 OVITO_END_INLINE_NAMESPACE

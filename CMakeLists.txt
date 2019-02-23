@@ -76,6 +76,7 @@ OPTION(OVITO_BUILD_PLUGIN_OSPRAY "Build the OSPRay renderer plugin (experimental
 OPTION(OVITO_BUILD_PLUGIN_CORRELATION "Build the correlation function plugin." "ON")
 OPTION(OVITO_BUILD_PLUGIN_VR "Build the virtual reality plugin (experimental)." "OFF")
 OPTION(OVITO_BUILD_PLUGIN_VOROTOP "Build the VoroTop plugin." "ON")
+OPTION(OVITO_BUILD_PLUGIN_WALLACE "Build the elastic stability plugin." "ON")
 
 # This is a global list of plugin targets that will be built.
 # It will get populated by the OVITO_PLUGIN macro.

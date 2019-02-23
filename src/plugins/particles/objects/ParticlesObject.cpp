@@ -368,6 +368,15 @@ void ParticlesObject::OOMetaClass::prepareNewProperty(PropertyObject* property) 
 		vis->setEnabled(false);
 		property->addVisElement(vis);
 	}
+
+	else if(property->type() == ParticlesObject::ElasticDisplacementProperty) {
+		OORef<VectorVis> vis = new VectorVis(property->dataset());
+		vis->setObjectTitle(tr("Elastic Displacements"));
+		if(!Application::instance()->scriptMode())
+			vis->loadUserDefaults();
+		vis->setEnabled(false);
+		property->addVisElement(vis);
+	}
 	else if(property->type() == ParticlesObject::ForceProperty) {
 		OORef<VectorVis> vis = new VectorVis(property->dataset());
 		vis->setObjectTitle(tr("Forces"));
@@ -418,6 +427,7 @@ PropertyPtr ParticlesObject::OOMetaClass::createStandardStorage(size_t particleC
 		break;
 	case PositionProperty:
 	case DisplacementProperty:
+	case ElasticDisplacementProperty:
 	case VelocityProperty:
 	case ForceProperty:
 	case DipoleOrientationProperty:
@@ -448,6 +458,7 @@ PropertyPtr ParticlesObject::OOMetaClass::createStandardStorage(size_t particleC
 	case DipoleMagnitudeProperty:
 	case CentroSymmetryProperty:
 	case DisplacementMagnitudeProperty:
+	case ElasticDisplacementMagnitudeProperty:
 	case VelocityMagnitudeProperty:
 		dataType = PropertyStorage::Float;
 		componentCount = 1;
@@ -479,7 +490,13 @@ PropertyPtr ParticlesObject::OOMetaClass::createStandardStorage(size_t particleC
 		dataType = PropertyStorage::Int;
 		componentCount = 3;
 		stride = componentCount * sizeof(int);
-		break;
+        break;
+    case WallaceTensorProperty:
+        dataType = PropertyStorage::Float;
+        componentCount = 21;
+        stride = componentCount + sizeof(FloatType);
+        break;
+    case ElasticStabilityParameterProperty:
 	default:
 		OVITO_ASSERT_MSG(false, "ParticlesObject::createStandardStorage()", "Invalid standard property type");
 		throw Exception(tr("This is not a valid standard property type: %1").arg(type));
@@ -564,6 +581,8 @@ void ParticlesObject::OOMetaClass::initialize()
 	registerStandardProperty(ColorProperty, tr("Color"), PropertyStorage::Float, rgbList, tr("Particle colors"));
 	registerStandardProperty(DisplacementProperty, tr("Displacement"), PropertyStorage::Float, xyzList, tr("Displacements"));
 	registerStandardProperty(DisplacementMagnitudeProperty, tr("Displacement Magnitude"), PropertyStorage::Float, emptyList);
+	registerStandardProperty(ElasticDisplacementProperty, tr("Elastic Displacement"), PropertyStorage::Float, xyzList, tr("Elastic Displacements"));
+	registerStandardProperty(ElasticDisplacementMagnitudeProperty, tr("Elastic Displacement Magnitude"), PropertyStorage::Float, emptyList);
 	registerStandardProperty(VelocityProperty, tr("Velocity"), PropertyStorage::Float, xyzList, tr("Velocities"));
 	registerStandardProperty(PotentialEnergyProperty, tr("Potential Energy"), PropertyStorage::Float, emptyList);
 	registerStandardProperty(KineticEnergyProperty, tr("Kinetic Energy"), PropertyStorage::Float, emptyList);
@@ -596,6 +615,8 @@ void ParticlesObject::OOMetaClass::initialize()
 	registerStandardProperty(RotationProperty, tr("Rotation"), PropertyStorage::Float, quaternionList);
 	registerStandardProperty(StretchTensorProperty, tr("Stretch Tensor"), PropertyStorage::Float, symmetricTensorList);
 	registerStandardProperty(MoleculeTypeProperty, tr("Molecule Type"), PropertyStorage::Float, emptyList, tr("Molecule types"));
+    registerStandardProperty(WallaceTensorProperty, tr("Wallace Tensor"), PropertyStorage::Float, tensorList);
+    registerStandardProperty(ElasticStabilityParameterProperty, tr("Elastic Stability Parameter"), PropertyStorage::Float, emptyList);
 }
 
 /******************************************************************************

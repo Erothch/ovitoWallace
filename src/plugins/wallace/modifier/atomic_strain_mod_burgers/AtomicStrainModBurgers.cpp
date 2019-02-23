@@ -26,48 +26,50 @@
 #include <core/dataset/DataSetContainer.h>
 #include <core/utilities/concurrent/ParallelFor.h>
 #include <ptm/qcprot/polar.hpp>
-#include "AtomicStrainModifier.h"
+#include "AtomicStrainModBurgers.h"
 
 namespace Ovito { namespace Particles { OVITO_BEGIN_INLINE_NAMESPACE(Modifiers) OVITO_BEGIN_INLINE_NAMESPACE(Analysis)
 
-IMPLEMENT_OVITO_CLASS(AtomicStrainModifier);
-DEFINE_PROPERTY_FIELD(AtomicStrainModifier, cutoff);
-DEFINE_PROPERTY_FIELD(AtomicStrainModifier, calculateDeformationGradients);
-DEFINE_PROPERTY_FIELD(AtomicStrainModifier, calculateStrainTensors);
-DEFINE_PROPERTY_FIELD(AtomicStrainModifier, calculateNonaffineSquaredDisplacements);
-DEFINE_PROPERTY_FIELD(AtomicStrainModifier, selectInvalidParticles);
-DEFINE_PROPERTY_FIELD(AtomicStrainModifier, calculateStretchTensors);
-DEFINE_PROPERTY_FIELD(AtomicStrainModifier, calculateRotations);
+IMPLEMENT_OVITO_CLASS(AtomicStrainModBurgers);
+DEFINE_PROPERTY_FIELD(AtomicStrainModBurgers, cutoff);
+DEFINE_PROPERTY_FIELD(AtomicStrainModBurgers, calculateDeformationGradients);
+DEFINE_PROPERTY_FIELD(AtomicStrainModBurgers, calculateStrainTensors);
+DEFINE_PROPERTY_FIELD(AtomicStrainModBurgers, calculateNonaffineSquaredDisplacements);
+DEFINE_PROPERTY_FIELD(AtomicStrainModBurgers, selectInvalidParticles);
+DEFINE_PROPERTY_FIELD(AtomicStrainModBurgers, calculateStretchTensors);
+DEFINE_PROPERTY_FIELD(AtomicStrainModBurgers, calculateRotations);
+DEFINE_PROPERTY_FIELD(AtomicStrainModBurgers, burgersContent);
 //Need to add property field for use elastic displacements
-SET_PROPERTY_FIELD_LABEL(AtomicStrainModifier, cutoff, "Cutoff radius");
-SET_PROPERTY_FIELD_LABEL(AtomicStrainModifier, calculateDeformationGradients, "Output deformation gradient tensors");
-SET_PROPERTY_FIELD_LABEL(AtomicStrainModifier, calculateStrainTensors, "Output strain tensors");
-SET_PROPERTY_FIELD_LABEL(AtomicStrainModifier, calculateNonaffineSquaredDisplacements, "Output non-affine squared displacements");
-SET_PROPERTY_FIELD_LABEL(AtomicStrainModifier, selectInvalidParticles, "Select invalid particles");
-SET_PROPERTY_FIELD_LABEL(AtomicStrainModifier, calculateStretchTensors, "Output stretch tensors");
-SET_PROPERTY_FIELD_LABEL(AtomicStrainModifier, calculateRotations, "Output rotations");
-SET_PROPERTY_FIELD_UNITS_AND_MINIMUM(AtomicStrainModifier, cutoff, WorldParameterUnit, 0);
+SET_PROPERTY_FIELD_LABEL(AtomicStrainModBurgers, cutoff, "Cutoff radius");
+SET_PROPERTY_FIELD_LABEL(AtomicStrainModBurgers, calculateDeformationGradients, "Output deformation gradient tensors");
+SET_PROPERTY_FIELD_LABEL(AtomicStrainModBurgers, calculateStrainTensors, "Output strain tensors");
+SET_PROPERTY_FIELD_LABEL(AtomicStrainModBurgers, calculateNonaffineSquaredDisplacements, "Output non-affine squared displacements");
+SET_PROPERTY_FIELD_LABEL(AtomicStrainModBurgers, selectInvalidParticles, "Select invalid particles");
+SET_PROPERTY_FIELD_LABEL(AtomicStrainModBurgers, calculateStretchTensors, "Output stretch tensors");
+SET_PROPERTY_FIELD_LABEL(AtomicStrainModBurgers, calculateRotations, "Output rotations");
+SET_PROPERTY_FIELD_UNITS_AND_MINIMUM(AtomicStrainModBurgers, cutoff, WorldParameterUnit, 0);
 //Add set property field as above
 
 /******************************************************************************
 * Constructs the modifier object.
 ******************************************************************************/
 //add use elastic deformations into constructor (default to false)
-AtomicStrainModifier::AtomicStrainModifier(DataSet* dataset) : ReferenceConfigurationModifier(dataset),
+AtomicStrainModBurgers::AtomicStrainModBurgers(DataSet* dataset) : ReferenceConfigurationModifier(dataset),
     _cutoff(3), 
 	_calculateDeformationGradients(false), 
 	_calculateStrainTensors(false), 
 	_calculateNonaffineSquaredDisplacements(false),
 	_calculateStretchTensors(false), 
 	_calculateRotations(false),
-    _selectInvalidParticles(true)
+    _selectInvalidParticles(true),
+    _burgersContent(Vector3::Zero())
 {
 }
 
 /******************************************************************************
 * Creates and initializes a computation engine that will compute the modifier's results.
 ******************************************************************************/
-Future<AsynchronousModifier::ComputeEnginePtr> AtomicStrainModifier::createEngineWithReference(TimePoint time, ModifierApplication* modApp, PipelineFlowState input, const PipelineFlowState& referenceState, TimeInterval validityInterval)
+Future<AsynchronousModifier::ComputeEnginePtr> AtomicStrainModBurgers::createEngineWithReference(TimePoint time, ModifierApplication* modApp, PipelineFlowState input, const PipelineFlowState& referenceState, TimeInterval validityInterval)
 {
 	// Get the current particle positions.
 	const ParticlesObject* particles = input.expectObject<ParticlesObject>();
@@ -99,15 +101,15 @@ Future<AsynchronousModifier::ComputeEnginePtr> AtomicStrainModifier::createEngin
 	return std::make_shared<AtomicStrainEngine>(validityInterval, particles, posProperty->storage(), inputCell->data(), refPosProperty->storage(), refCell->data(),
 			std::move(identifierProperty), std::move(refIdentifierProperty),
 			cutoff(), affineMapping(), useMinimumImageConvention(), calculateDeformationGradients(), calculateStrainTensors(),
-			calculateNonaffineSquaredDisplacements(), calculateRotations(), calculateStretchTensors(), selectInvalidParticles());
+            calculateNonaffineSquaredDisplacements(), calculateRotations(), calculateStretchTensors(), selectInvalidParticles(), burgersContent());
 }
 
 /******************************************************************************
 * Performs the actual computation. This method is executed in a worker thread.
 ******************************************************************************/
-void AtomicStrainModifier::AtomicStrainEngine::perform()
+void AtomicStrainModBurgers::AtomicStrainEngine::perform()
 {
-	task()->setProgressText(tr("Computing atomic displacements"));
+    task()->setProgressText(tr("Computing atomic displacements"));
 
 	// First determine the mapping from particles of the reference config to particles
 	// of the current config.
@@ -135,12 +137,18 @@ void AtomicStrainModifier::AtomicStrainEngine::perform()
 				}
 			}
 			*u = refCell().matrix() * delta;
+            // while((*u - _burgersContent).squaredLength() < u->squaredLength())
+              //   *u -= _burgersContent;
+
+             //while((*u + _burgersContent).squaredLength() < u->squaredLength())
+               //  *u += _burgersContent;
+
 		}
 	});
 	if(task()->isCanceled())
 		return;
 
-	task()->setProgressText(tr("Computing atomic strain tensors"));
+    task()->setProgressText(tr("Computing atomic strain tensors"));
 	
 	// Prepare the neighbor list for the reference configuration.
 	CutoffNeighborFinder neighborFinder;
@@ -156,7 +164,7 @@ void AtomicStrainModifier::AtomicStrainEngine::perform()
 /******************************************************************************
 * Computes the strain tensor of a single particle.
 ******************************************************************************/
-void AtomicStrainModifier::AtomicStrainEngine::computeStrain(size_t particleIndex, CutoffNeighborFinder& neighborFinder)
+void AtomicStrainModBurgers::AtomicStrainEngine::computeStrain(size_t particleIndex, CutoffNeighborFinder& neighborFinder)
 {
 	// Note: We do the following calculations using double precision numbers to
 	// minimize numerical errors. Final results will be converted back to
@@ -170,13 +178,21 @@ void AtomicStrainModifier::AtomicStrainEngine::computeStrain(size_t particleInde
 	size_t particleIndexReference = currentToRefIndexMap()[particleIndex];
 	FloatType sumSquaredDistance = 0;
 	if(particleIndexReference != std::numeric_limits<size_t>::max()) {
-		const Vector3& center_displacement = displacements()->getVector3(particleIndexReference);
+        const Vector3& center_displacement = displacements()->getVector3(particleIndexReference); //Displacement of center particle
 		for(CutoffNeighborFinder::Query neighQuery(neighborFinder, particleIndexReference); !neighQuery.atEnd(); neighQuery.next()) {
 			size_t neighborIndexCurrent = refToCurrentIndexMap()[neighQuery.current()];
 			if(neighborIndexCurrent == std::numeric_limits<size_t>::max()) continue;
-			const Vector3& neigh_displacement = displacements()->getVector3(neighQuery.current());
-			Vector3 delta_ref = neighQuery.delta();
-			Vector3 delta_cur = delta_ref + neigh_displacement - center_displacement;
+            const Vector3& neigh_displacement = displacements()->getVector3(neighQuery.current()); //gets displacements of neigh from ref to current
+            Vector3 delta_ref = neighQuery.delta(); //Dist between central particle and near neighbor in ref state
+            Vector3 delta_cur = delta_ref + neigh_displacement - center_displacement; //Dist between particles in current state
+            //Remove effect of burgers vector
+            while((delta_cur - delta_ref - _burgersContent).squaredLength() < (delta_cur - delta_ref).squaredLength())
+               delta_cur -= _burgersContent;
+
+            while((delta_cur - delta_ref + _burgersContent).squaredLength() < (delta_cur - delta_ref).squaredLength())
+               delta_cur += _burgersContent;
+
+
 			if(affineMapping() == TO_CURRENT_CELL) {
 				delta_ref = refToCurTM() * delta_ref;
 				delta_cur = refToCurTM() * delta_cur;
@@ -318,7 +334,7 @@ void AtomicStrainModifier::AtomicStrainEngine::computeStrain(size_t particleInde
 /******************************************************************************
 * Injects the computed results of the engine into the data pipeline.
 ******************************************************************************/
-void AtomicStrainModifier::AtomicStrainEngine::emitResults(TimePoint time, ModifierApplication* modApp, PipelineFlowState& state)
+void AtomicStrainModBurgers::AtomicStrainEngine::emitResults(TimePoint time, ModifierApplication* modApp, PipelineFlowState& state)
 {
 	ParticlesObject* particles = state.expectMutableObject<ParticlesObject>();
 
@@ -334,8 +350,10 @@ void AtomicStrainModifier::AtomicStrainEngine::emitResults(TimePoint time, Modif
 	if(strainTensors())
 		particles->createProperty(strainTensors());
 
-	if(deformationGradients())
+    if(deformationGradients()) {
+        //OVITO_ASSERT(deformationGradients()->size() == particles->elementCount());
 		particles->createProperty(deformationGradients());
+    }
 
 	if(nonaffineSquaredDisplacements())
 		particles->createProperty(nonaffineSquaredDisplacements());
@@ -356,6 +374,7 @@ void AtomicStrainModifier::AtomicStrainEngine::emitResults(TimePoint time, Modif
 
 	if(numInvalidParticles() != 0)
 		state.setStatus(PipelineStatus(PipelineStatus::Warning, tr("Could not compute local deformation for %1 particles because of too few neighbors. Increase cutoff radius to include more neighbors.").arg(numInvalidParticles())));
+
 }
 
 OVITO_END_INLINE_NAMESPACE
