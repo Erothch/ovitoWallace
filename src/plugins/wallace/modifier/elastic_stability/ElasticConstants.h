@@ -124,6 +124,7 @@ private:
             arraySoec[3][3] = soec[4];
             arraySoec[4][4] = soec[4];
             arraySoec[5][5] = A;
+            break;
             }
         case 11: //High symmetry cubic - input vector is 3 indices
             {
@@ -136,6 +137,7 @@ private:
             arraySoec[3][3] = soec[2];
             arraySoec[4][4] = soec[2];
             arraySoec[5][5] = soec[2];
+            break;
             }
         }
         //Apply general symm
@@ -193,13 +195,13 @@ private:
             {
             float A = toec[0]+ toec[1]-toec[7]; //C111+C112-C222
             float D = -(2*toec[0]+toec[1]-3*toec[7])/4;
-            float I = (2*toec[0]-toec[1]-toec[7]);
+            float I = (2*toec[0]-toec[1]-toec[7])/4;
             float J = (toec[2]-toec[3])/2;
             float K = -(toec[5]-toec[6])/2;
             arrayToec[0][0][0] = toec[0];
             arrayToec[0][0][1] = toec[1];
             arrayToec[0][0][2] = toec[2];
-            arrayToec[0][1][1] = toec[2];
+            arrayToec[0][1][1] = A;
             arrayToec[0][1][2] = toec[3];
             arrayToec[0][2][2] = toec[4];
             arrayToec[0][3][3] = toec[5];
@@ -207,7 +209,7 @@ private:
             arrayToec[0][5][5] = D;
             arrayToec[1][1][1] = toec[7];
             arrayToec[1][1][2] = toec[2];
-            arrayToec[1][2][2] = toec[2];
+            arrayToec[1][2][2] = toec[4];
             arrayToec[1][3][3] = toec[6];
             arrayToec[1][4][4] = toec[5];
             arrayToec[1][5][5] = I;
@@ -216,6 +218,7 @@ private:
             arrayToec[2][4][4] = toec[9];
             arrayToec[2][5][5] = J;
             arrayToec[3][4][5] = K;
+            break;
 
 
             }
@@ -241,6 +244,8 @@ private:
             arrayToec[2][4][4] = toec[4];
             arrayToec[2][5][5] = toec[3];
             arrayToec[3][4][5] = toec[5];
+            break;
+
             }
 
         }

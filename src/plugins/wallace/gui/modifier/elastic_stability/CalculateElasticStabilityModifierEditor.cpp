@@ -63,7 +63,7 @@ void CalculateElasticStabilityModifierEditor::createUI(const RolloutInsertionPar
     //Should be able to loop over the allowed cases, make some association between list of labels and elastic constants...
     for ( unsigned int i = 0; i < 2; i++){
     switch(i) {
-        case(1): {
+        case(0): {
 
 
 
@@ -91,8 +91,9 @@ void CalculateElasticStabilityModifierEditor::createUI(const RolloutInsertionPar
                 connect(spinner, &SpinnerWidget::spinnerDragStop, this, &CalculateElasticStabilityModifierEditor::onSpinnerDragStop);
                 connect(spinner, &SpinnerWidget::spinnerDragAbort, this, &CalculateElasticStabilityModifierEditor::onSpinnerDragAbort);
             }
+            break;
         }
-        case(2): {
+        case(1): {
             QWidget* HexagonalHighPage = new QWidget;
             stackedSoecLayout->addWidget(HexagonalHighPage);
             QGridLayout* sublayout = new QGridLayout(HexagonalHighPage);
@@ -116,6 +117,7 @@ void CalculateElasticStabilityModifierEditor::createUI(const RolloutInsertionPar
                 connect(spinner, &SpinnerWidget::spinnerDragStop, this, &CalculateElasticStabilityModifierEditor::onSpinnerDragStop);
                 connect(spinner, &SpinnerWidget::spinnerDragAbort, this, &CalculateElasticStabilityModifierEditor::onSpinnerDragAbort);
                 }
+            break;
             }
         }
     }
@@ -134,7 +136,7 @@ void CalculateElasticStabilityModifierEditor::createUI(const RolloutInsertionPar
     //Should be able to loop over the allowed cases, make some association between list of labels and elastic constants...
     for ( unsigned int i = 0; i < 2; i++){
     switch(i) {
-        case(1): {
+        case(0): {
             QWidget* CubicHighPage = new QWidget;
             QGridLayout* sublayout = new QGridLayout(CubicHighPage);
             stackedToecLayout->addWidget(CubicHighPage);
@@ -160,8 +162,9 @@ void CalculateElasticStabilityModifierEditor::createUI(const RolloutInsertionPar
                 connect(spinner, &SpinnerWidget::spinnerDragAbort, this, &CalculateElasticStabilityModifierEditor::onSpinnerDragAbort);
 
             }
+            break;
         }
-        case(2): {
+        case(1): {
             QWidget* HexagonalHighPage = new QWidget;
             stackedToecLayout->addWidget(HexagonalHighPage);
             QGridLayout* sublayout = new QGridLayout(HexagonalHighPage);
@@ -186,6 +189,7 @@ void CalculateElasticStabilityModifierEditor::createUI(const RolloutInsertionPar
                 connect(spinner, &SpinnerWidget::spinnerDragAbort, this, &CalculateElasticStabilityModifierEditor::onSpinnerDragAbort);
                 }
             }
+            break;
         }
     }
     connect(crystalStructureUI->comboBox(), SIGNAL(activated(int)), stackedToecLayout, SLOT(setCurrentIndex(int)));
@@ -237,6 +241,7 @@ void CalculateElasticStabilityModifierEditor::createUI(const RolloutInsertionPar
  void CalculateElasticStabilityModifierEditor::onCurrentTextChanged() {
      //get the number of constants for currently selected structure
      int currentStruct = crystalStructureUI->comboBox()->currentData().toInt();
+     _structure = currentStruct;
 
      //set _vecSoec to 0 vector of correct length for current structure
      int numSoec = ElasticConstants::numberSoec(currentStruct);
@@ -285,10 +290,10 @@ void CalculateElasticStabilityModifierEditor::onButtonPressed() {
     if(!mod) return;
 
     //get the number of constants for currently selected structure
-    int currentStruct = crystalStructureUI->comboBox()->currentData().toInt();
+    //int currentStruct = crystalStructureUI->comboBox()->currentData().toInt();
 
     //set all parameters for calculation
-    mod->setStructure(currentStruct);
+    mod->setStructure(_structure);
     mod->setSoec(_vecSoec); //RUNNING INTO SEG FAULT HERE
     mod->setToec(_vecToec);
 }

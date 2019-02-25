@@ -22,7 +22,8 @@ public:
     /// Default constructor
     Q_INVOKABLE CalculateElasticStabilityModifierEditor() :
         _vecSoec(std::vector<float>({0 ,0, 0})),
-        _vecToec(std::vector<float>({0 ,0, 0, 0, 0, 0}))
+        _vecToec(std::vector<float>({0 ,0, 0, 0, 0, 0})),
+        _structure(11)
     {}
 
 
@@ -60,6 +61,8 @@ private:
     std::vector<float> _vecSoec;
 
     std::vector<float> _vecToec;
+
+    int _structure;
 
 
     //SpinnerWidget* soecSpinners;
