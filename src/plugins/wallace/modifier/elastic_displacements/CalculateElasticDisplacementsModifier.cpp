@@ -107,7 +107,7 @@ void CalculateElasticDisplacementsModifier::ElasticDisplacementEngine::perform()
 				if(promise.isCanceled()) return;
 				Point3 reduced_current_pos = cell().inverseMatrix() * (*p);
 				Point3 reduced_reference_pos = refCell().inverseMatrix() * refPositions()->getPoint3(*index);
-				Vector3 delta = reduced_current_pos - reduced_reference_pos;
+                Vector3 delta = reduced_current_pos - reduced_reference_pos;
 				if(useMinimumImageConvention()) {
 					for(size_t k = 0; k < 3; k++) {
 						if(refCell().pbcFlags()[k])
@@ -134,7 +134,7 @@ void CalculateElasticDisplacementsModifier::ElasticDisplacementEngine::perform()
 			auto index = currentToRefIndexMap().cbegin() + startIndex;
 			for(; count; --count, ++u, ++umag, ++p, ++index) {
 				if(promise.isCanceled()) return;
-				*u = *p - refPositions()->getPoint3(*index);
+                *u = *p - refPositions()->getPoint3(*index);
 				if(useMinimumImageConvention()) {
 					for(size_t k = 0; k < 3; k++) {
 						if(refCell().pbcFlags()[k]) {

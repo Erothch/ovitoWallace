@@ -134,6 +134,8 @@ PYBIND11_MODULE(Wallace, m)
         "Computes an elastic stability parameter based on the minimum eigenvalues of the symmetric wallace tensor at finite deformation"
         "\n\n"
         "**Modifier outputs**"
+        "* ``Stability Parameter`` (:py:class`~ovito.data.ParticleProperty`):\n"
+        "The elastic stability parameter described in..."
         "\n\n",
         "CalculateElasticStabilityModifier")
        .def_property("set_structure", &CalculateElasticStabilityModifier::structure, &CalculateElasticStabilityModifier::setStructure,

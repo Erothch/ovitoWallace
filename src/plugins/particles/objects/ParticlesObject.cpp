@@ -497,6 +497,8 @@ PropertyPtr ParticlesObject::OOMetaClass::createStandardStorage(size_t particleC
         stride = componentCount + sizeof(FloatType);
         break;
     case ElasticStabilityParameterProperty:
+        dataType = PropertyStorage::Float;
+        break;
 	default:
 		OVITO_ASSERT_MSG(false, "ParticlesObject::createStandardStorage()", "Invalid standard property type");
 		throw Exception(tr("This is not a valid standard property type: %1").arg(type));

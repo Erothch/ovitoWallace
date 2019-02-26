@@ -29,11 +29,13 @@ namespace Ovito { namespace Particles { OVITO_BEGIN_INLINE_NAMESPACE(Modifiers) 
 
 IMPLEMENT_OVITO_CLASS(CalculateElasticDisplacementsModifier);
 DEFINE_REFERENCE_FIELD(CalculateElasticDisplacementsModifier, vectorVis);
+DEFINE_PROPERTY_FIELD(CalculateElasticDisplacementsModifier, burgersContent);
 
 /******************************************************************************
 * Constructs the modifier object.
 ******************************************************************************/
-CalculateElasticDisplacementsModifier::CalculateElasticDisplacementsModifier(DataSet* dataset) : ReferenceConfigurationModifier(dataset)
+CalculateElasticDisplacementsModifier::CalculateElasticDisplacementsModifier(DataSet* dataset) : ReferenceConfigurationModifier(dataset),
+    _burgersContent(Vector3::Zero())
 {
 	// Create vis element for vectors.
 	setVectorVis(new VectorVis(dataset));
@@ -78,9 +80,8 @@ Future<AsynchronousModifier::ComputeEnginePtr> CalculateElasticDisplacementsModi
 	return std::make_shared<ElasticDisplacementEngine>(validityInterval, posProperty->storage(), inputCell->data(), 
 			particles, refPosProperty->storage(), refCell->data(),
 			std::move(identifierProperty), std::move(refIdentifierProperty),
-			affineMapping(), useMinimumImageConvention());
+            affineMapping(), useMinimumImageConvention(), burgersContent());
 	
-	//Eric Addition: Get burgers vectors in cartesian frame.
 
 }
 
@@ -106,8 +107,7 @@ void CalculateElasticDisplacementsModifier::ElasticDisplacementEngine::perform()
 				if(promise.isCanceled()) return;
 				Point3 reduced_current_pos = cell().inverseMatrix() * (*p);
 				Point3 reduced_reference_pos = refCell().inverseMatrix() * refPositions()->getPoint3(*index);
-				//This is where we need to change to mod b out
-				Vector3 delta = reduced_current_pos - reduced_reference_pos;
+                Vector3 delta = reduced_current_pos - reduced_reference_pos;
 				if(useMinimumImageConvention()) {
 					for(size_t k = 0; k < 3; k++) {
 						if(refCell().pbcFlags()[k])
@@ -115,6 +115,13 @@ void CalculateElasticDisplacementsModifier::ElasticDisplacementEngine::perform()
 					}
 				}
 				*u = reduced_to_absolute * delta;
+                //Mod out a burgers vector
+                while((*u - _burgersContent).squaredLength() < u->squaredLength())
+                    *u -= _burgersContent;
+
+                while((*u + _burgersContent).squaredLength() < u->squaredLength())
+                    *u += _burgersContent;
+
 				*umag = u->length();
 			}
 		});
@@ -127,8 +134,7 @@ void CalculateElasticDisplacementsModifier::ElasticDisplacementEngine::perform()
 			auto index = currentToRefIndexMap().cbegin() + startIndex;
 			for(; count; --count, ++u, ++umag, ++p, ++index) {
 				if(promise.isCanceled()) return;
-				//This is where we need to change to mod b out
-				*u = *p - refPositions()->getPoint3(*index);
+                *u = *p - refPositions()->getPoint3(*index);
 				if(useMinimumImageConvention()) {
 					for(size_t k = 0; k < 3; k++) {
 						if(refCell().pbcFlags()[k]) {
@@ -139,7 +145,14 @@ void CalculateElasticDisplacementsModifier::ElasticDisplacementEngine::perform()
 								*u -= refCell().matrix().column(k);
 						}
 					}
-				}
+               }
+                //Mod out a burgers vector
+                while((*u - _burgersContent).squaredLength() < u->squaredLength())
+                    *u -= _burgersContent;
+
+                while((*u + _burgersContent).squaredLength() < u->squaredLength())
+                    *u += _burgersContent;
+
 				*umag = u->length();
 			}
 		});

@@ -50,7 +50,7 @@ private:
                 _strainTensors(std::move(strainTensors)),
                 _deformationGradient(std::move(deformationGradient)),
                 _wallaceTensor(std::make_shared<PropertyStorage>(fingerprint.particleCount(), PropertyStorage::Float, 21, 21 * sizeof(FloatType) , tr("Wallace Tensor"), false)),
-                _stabilityParameter(std::make_shared<PropertyStorage>(fingerprint.particleCount(), PropertyStorage::Float, 1, 0, tr("Stability Paramater"), false)),
+                _stabilityParameter(std::make_shared<PropertyStorage>(fingerprint.particleCount(), PropertyStorage::Float, 1, 0, tr("Stability Parameter"), false)),
                 _simCell(simCell),
                 _inputFingerprint(std::move(fingerprint)),
                 _structure(structure),
