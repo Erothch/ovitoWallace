@@ -172,24 +172,24 @@ void CalculateElasticStabilityModifier::ElasticStabilityEngine::computeDeformedE
     Eigen::TensorFixedSize<float, Eigen::Sizes<3, 3>> Ft;
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            Ft(i, j) = Fm->row(j)[i]; // I switched these to test if trasp is issue
+            Ft(i, j) = Fm->row(i)[j]; // I switched these to test if trasp is issue
         }
     }
     //float J = Fmatrix.determinant();
 
     //get strain tensor storage
     const SymmetricTensor2* nm = strainTensors()->constDataSymmetricTensor2()+particleIndex;
-    //voigt form strain
+    //voigt form strain This is Correct
     Eigen::TensorFixedSize<float, Eigen::Sizes<6>> n;
     n(0) = nm->xx();
     n(1) = nm->yy();
     n(2) = nm->zz();
-    n(3) = nm->yz();
-    n(4) = nm->xz();
-    n(5) = nm->xy();
+    n(3) = nm->yz()*2;
+    n(4) = nm->xz()*2;
+    n(5) = nm->xy()*2;
 
 
-    //C3.n //CONFIRMED CORRECT
+    //C3.n //CONFIRMED CORRECT!
     Eigen::array<Eigen::IndexPair<int>, 1> pd0 = { Eigen::IndexPair<int>(2,0) };
     Eigen::TensorFixedSize<float, Eigen::Sizes<6, 6>> C3n = _vC3.contract(n, pd0);
 
@@ -211,7 +211,7 @@ void CalculateElasticStabilityModifier::ElasticStabilityEngine::computeDeformedE
                 }
             }
         }
-    }
+    }//Voigted D1 All set :)
 
 
     //Get the D2 term
@@ -219,31 +219,32 @@ void CalculateElasticStabilityModifier::ElasticStabilityEngine::computeDeformedE
     Eigen::TensorFixedSize<float, Eigen::Sizes<3, 3, 3, 3, 3, 3>> D2A1;
     Eigen::TensorFixedSize<float, Eigen::Sizes<3, 3, 3, 3, 3, 3>> D2A2;
 
-    Eigen::TensorFixedSize<float, Eigen::Sizes<3, 3, 3, 3, 3, 3>> D2f1;
-    Eigen::TensorFixedSize<float, Eigen::Sizes<3, 3, 3, 3, 3, 3>> D2f2;
+    //Eigen::TensorFixedSize<float, Eigen::Sizes<3, 3, 3, 3, 3, 3>> D2f1;
+    //Eigen::TensorFixedSize<float, Eigen::Sizes<3, 3, 3, 3, 3, 3>> D2f2;
 
-    Eigen::TensorFixedSize<float, Eigen::Sizes<3, 3, 3, 3>> Ft4 = Ft.contract(Ft, empty_index_list).eval(); //Definitely Correct and storage order is F1111 F1112 F1113 F1121 etc
-    //Use transposed version to get the correct values below...
-    //Eigen::array<Eigen::ptrdiff_t, 4> Ftt = {{1, 0, 3, 2}}; // Need to shuffle back to the correct positions
-    //Ft4 = Ft4.shuffle(Ftt);
+    Eigen::TensorFixedSize<float, Eigen::Sizes<3, 3, 3, 3>> Ft4 = Ft.contract(Ft, empty_index_list).eval(); //Good
 
     Eigen::array<Eigen::IndexPair<int>, 1> pI0 = { Eigen::IndexPair<int>(0, 1) }; //Seems wrong
-    Eigen::array<Eigen::IndexPair<int>, 2> pI1 = { Eigen::IndexPair<int>(1, 0), Eigen::IndexPair<int>(3, 1) }; //Seems correct now
-    Eigen::array<Eigen::IndexPair<int>, 1> pI2 = { Eigen::IndexPair<int>(0, 2) }; //Seems wrong
-    Eigen::array<Eigen::IndexPair<int>, 2> pI3 = { Eigen::IndexPair<int>(0, 0), Eigen::IndexPair<int>(3, 1) }; //Seems correct now
+    Eigen::array<Eigen::IndexPair<int>, 2> pI1 = { Eigen::IndexPair<int>(1, 1), Eigen::IndexPair<int>(3, 0) }; //Seems correct now
+    //Eigen::array<Eigen::IndexPair<int>, 1> pI2 = { Eigen::IndexPair<int>(2, 0) }; //Seems wrong
+    //Eigen::array<Eigen::IndexPair<int>, 2> pI3 = { Eigen::IndexPair<int>(0, 0), Eigen::IndexPair<int>(3, 1) }; //Seems correct now
 
-    Eigen::array<Eigen::ptrdiff_t, 6> SP1 = {{2, 0, 1, 4, 5, 3}}; // Need to shuffle back to the correct positions
+    Eigen::array<Eigen::ptrdiff_t, 6> SP1 = {{0, 1, 4, 5, 2, 3}}; // Need to shuffle back to the correct positions
     //Eigen::array<Eigen::ptrdiff_t, 6> SP2 = {{4, 5, 3, 1, 0, 2}}; // Testing this again now
 
-    D2A1 = Ft4.contract(_I4, pI0).eval(); //When comparing with Mathematica is equiv to TensorContract[TensorProduct[TensorContract[TensorProduct[F, F, I4], {1, 6}], I4], {{2, 7}, {4, 8}}] 6<->1 5<->2 4<->3
-    D2A2 = Ft4.contract(_I4, pI2).eval(); //Also getting wrong answer {3, 6} 5<->1 4<->3 6<->2 instead of as above (test with SP1 as {{2. 1. 0. 4. 5. 3}}
-    D2A2.shuffle(SP1) = D2A2.eval(); //Now compares correctly to the mathematica
+    D2A1 = Ft4.contract(_I4, pI0).eval(); //TensorContract[TensorProduct[Ft4, I4], {1, 6}]
+    D2A1 = D2A1.contract(_I4, pI1).eval(); //THIS IS CORRECT
+    D2A2.shuffle(SP1) = D2A1.eval(); //Check this, seems to be a sine issue??
 
-    D2f1 = D2A1.contract(_I4, pI1).eval(); //THIS IS CORRECT BUT ORDERED 6, 5, 4, 3, 2, 1
-    D2f2 = D2A2.contract(_I4, pI3).eval(); //SAME AS ABOVE!!
+    //D2A2 = Ft4.contract(_I4, pI2).eval(); //Also getting wrong answer {3, 6} 5<->1 4<->3 6<->2 instead of as above (test with SP1 as {{2. 1. 0. 4. 5. 3}}
+    //D2A2.shuffle(SP1) = D2A2.eval(); //Now compares correctly to the mathematica
+
+   // D2f1 = D2A1.contract(_I4, pI1).eval(); //THIS IS CORRECT BUT ORDERED 6, 5, 4, 3, 2, 1
+   // D2f2 = D2A2.contract(_I4, pI3).eval(); //SAME AS ABOVE!! THIS SEEMS WRONG :0 :(
 
     Eigen::TensorFixedSize<float, Eigen::Sizes<3, 3, 3, 3, 3, 3>> D2f;
-    D2f = 0.5*(D2f1+D2f2).eval();
+    //D2f = 0.5*(D2f1+D2f2).eval();
+    D2f = 0.5*(D2A1+D2A2).eval();
 
     //Voigt the D2 term
     Eigen::TensorFixedSize<float, Eigen::Sizes<6, 6, 6>> D2v;
@@ -251,7 +252,7 @@ void CalculateElasticStabilityModifier::ElasticStabilityEngine::computeDeformedE
         int w = ElasticConstants::vID(i, j);
         int v = ElasticConstants::vID(k, l);
         int y = ElasticConstants::vID(m, n);
-        D2v(w, v, y)= D2f(i, j, k, l, m, n); }}}}}} //THIS NOW WORKS
+        D2v(w, v, y)= D2f(i, j, k, l, m, n); }}}}}} //THIS NOW WORKS!
 
 
     //Calc cdef //Need to confirm
@@ -260,23 +261,29 @@ void CalculateElasticStabilityModifier::ElasticStabilityEngine::computeDeformedE
     Eigen::array<Eigen::IndexPair<int>, 1> pd3 = { Eigen::IndexPair<int>(0,0) };
     Eigen::array<Eigen::IndexPair<int>, 1> pd4 = { Eigen::IndexPair<int>(0,0) };
 
+
+    Eigen::TensorFixedSize<float, Eigen::Sizes<6, 6>> voigtCorrect1;
+    voigtCorrect1.setValues({{1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1}, {2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 2}});
+    Eigen::TensorFixedSize<float, Eigen::Sizes<6, 6>> voigtCorrect2;
+    voigtCorrect2.setValues({{1, 1, 1, 2, 2, 2}, {1, 1, 1, 2, 2, 2}, {1, 1, 1, 2, 2, 2}, {1, 1, 1, 2, 2, 2}, {1, 1, 1, 2, 2, 2}, {1, 1, 1, 2, 2, 2}});
+
+
     Eigen::TensorFixedSize<float, Eigen::Sizes<6, 6>> Cdef;
-    Eigen::TensorFixedSize<float, Eigen::Sizes<6, 6>> ct1 = _vC2+C3n; // Correct
-    Eigen::TensorFixedSize<float, Eigen::Sizes<6, 6>> ct2 = _vC2+0.5*C3n; //Correct
+    Eigen::TensorFixedSize<float, Eigen::Sizes<6, 6>> ct1 = (_vC2+C3n).eval()*voigtCorrect1*voigtCorrect2; // Correct
+    Eigen::TensorFixedSize<float, Eigen::Sizes<6, 6>> ct2 = (_vC2+0.5*C3n).eval()*voigtCorrect1; //Check !! DEFINITION ISSUE ON THESE CONVERT TO VOIGT CORRECTLY!!
 
     Eigen::TensorFixedSize<float, Eigen::Sizes<6, 6>> Cdef1;
-    Cdef1 = D1v.contract(ct1, pd1).eval(); // First part of first Cdef term Good but remember order is switched
-
-    Cdef1 = D1v.contract(Cdef1, pd2).eval(); // This is now good
+    Cdef1 = D1v.contract(ct1, pd1).eval(); // This is now good
+    Cdef1 = D1v.contract(Cdef1, pd2).eval(); // This should be good.
 
     Eigen::TensorFixedSize<float, Eigen::Sizes<6, 6>> Cdef2; // Just the second term Check index order after contractions here
     Eigen::TensorFixedSize<float, Eigen::Sizes<6, 6, 6>> Cdef22;
 
     //Make some ct2.contract term
     Cdef22 = ct2.contract(D2v, pd4);
-    Cdef2 = Cdef22.contract(n, pd4);
+    Cdef2 = Cdef22.contract(n, pd4); // This is good now
 
-    Cdef = (1/J)*(Cdef1+Cdef2).eval(); //This is now correct
+    Cdef = (1/J)*(Cdef1+Cdef2).eval(); //This seems correct now
 
     //send out soecDeformed - stored as C11 C12 C13 C14 ... C22 C23 C24 ....C66
     int count = 0;
@@ -328,9 +335,9 @@ void CalculateElasticStabilityModifier::ElasticStabilityEngine::computeDeformedE
         }
     }
     //Del prod pkst
-    Eigen::TensorFixedSize<float, Eigen::Sizes<3, 3, 3, 3>> DP = del.contract(Pkst2, empty_index_list ); // Good
+    Eigen::TensorFixedSize<float, Eigen::Sizes<3, 3, 3, 3>> DP = Pkst2.contract(del, empty_index_list ); // Good
 
-    //Compute symm wallace tensor
+    //Compute symm wallace tensor (*Something wrong before this point*)
     Eigen::TensorFixedSize<float, Eigen::Sizes<3, 3, 3, 3>> B;
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j ++) {
@@ -340,8 +347,8 @@ void CalculateElasticStabilityModifier::ElasticStabilityEngine::computeDeformedE
                 }
             }
         }
-    }
-    B = 0.5*B+Cdef4;
+    } //Good
+    B = 0.5*B+Cdef4; //Good
 
     //Do this a prettier way later...
     Eigen::MatrixXf WMatrix = Eigen::MatrixXf::Zero(6, 6);
